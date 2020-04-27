@@ -46,9 +46,10 @@ def get_aithre(
     if aithre.AithreManager.CO_SENSOR is not None:
         co_response = {CO_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_co_level(),
                        BATTERY_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_battery()}
-    return json.dumps(co_response,
-                      indent=4,
-                      sort_keys=False)
+    return json.dumps(
+        co_response,
+        indent=4,
+        sort_keys=False)
 
 
 def get_illyrian(
@@ -65,9 +66,10 @@ def get_illyrian(
                          PULSE_KEY: aithre.AithreManager.SPO2_SENSOR.get_heartrate(),
                          SIGNAL_STRENGTH_KEY: aithre.AithreManager.SPO2_SENSOR.get_signal_strength()}
 
-    return json.dumps(spo2_response,
-                      indent=4,
-                      sort_keys=False)
+    return json.dumps(
+        spo2_response,
+        indent=4,
+        sort_keys=False)
 
 
 class AithreHost(BaseHTTPRequestHandler):
