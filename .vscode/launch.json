@@ -15,7 +15,7 @@
             "name": "AithreConsole",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/aithre.py",
+            "program": "${workspaceFolder}/aithre_console.py",
             "console": "integratedTerminal"
         },
         {
