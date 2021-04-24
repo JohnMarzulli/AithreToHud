@@ -1,5 +1,3 @@
-import datetime
-import sys
 import time
 from logging import Logger
 from sys import platform as os_platform
@@ -9,7 +7,7 @@ from aithre_task import AithreTask
 IS_LINUX = 'linux' in os_platform
 
 if IS_LINUX:
-    from bluepy.btle import UUID, Peripheral, Scanner, DefaultDelegate
+    from bluepy.btle import Peripheral, Scanner
 
 
 # The Aithre is always expected to have a public address

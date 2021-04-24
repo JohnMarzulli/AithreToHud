@@ -3,15 +3,10 @@ Module to run a RESTful server to set and get the configuration.
 """
 
 
-import datetime
 import json
 import os
 import re
 import shutil
-import socket
-import sys
-import urllib
-
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import aithre
@@ -44,8 +39,9 @@ def get_aithre(
     co_response = {ERROR_JSON_KEY: 'Aithre CO sensor not detected'}
 
     if aithre.AithreManager.CO_SENSOR is not None:
-        co_response = {CO_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_co_level(),
-                       BATTERY_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_battery()}
+        co_response = {
+            CO_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_co_level(),
+            BATTERY_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_battery()}
     return json.dumps(
         co_response,
         indent=4,
@@ -62,9 +58,10 @@ def get_illyrian(
     spo2_response = {ERROR_JSON_KEY: 'Illyrian SPO2 sensor not detected'}
 
     if aithre.AithreManager.SPO2_SENSOR is not None:
-        spo2_response = {SPO2_LEVEL_KEY: aithre.AithreManager.SPO2_SENSOR.get_spo2_level(),
-                         PULSE_KEY: aithre.AithreManager.SPO2_SENSOR.get_heartrate(),
-                         SIGNAL_STRENGTH_KEY: aithre.AithreManager.SPO2_SENSOR.get_signal_strength()}
+        spo2_response = {
+            SPO2_LEVEL_KEY: aithre.AithreManager.SPO2_SENSOR.get_spo2_level(),
+            PULSE_KEY: aithre.AithreManager.SPO2_SENSOR.get_heartrate(),
+            SIGNAL_STRENGTH_KEY: aithre.AithreManager.SPO2_SENSOR.get_signal_strength()}
 
     return json.dumps(
         spo2_response,
