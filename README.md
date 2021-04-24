@@ -23,9 +23,9 @@ If you are using the default release image, then no additional work is required.
 
 These installation steps are intended for developers or those who wish to install from scratch.
 
-```
+```bash
 pushd /usr/local/lib/python3.7/dist-packages/bluepy-1.3.0-py3.7.egg/bluepy
-make
+sudo make
 sudo setcap cap_net_raw+e  bluepy-helper
 sudo setcap cap_net_admin+eip  bluepy-helper
 ```
