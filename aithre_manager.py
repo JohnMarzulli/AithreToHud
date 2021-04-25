@@ -6,7 +6,6 @@ import json
 
 from aithre_task import AithreTask
 from sensors.aithre import Aithre, get_aithre_mac
-from sensors.device_manager import DeviceManager
 from sensors.illyrian import Illyrian, get_illyrian_macs
 
 # EXAMPLES
@@ -23,6 +22,10 @@ BATTERY_LEVEL_KEY = "battery"
 SPO2_LEVEL_KEY = "spo2"
 PULSE_KEY = "heartrate"
 SIGNAL_STRENGTH_KEY = "signal"
+IS_CONNECTED_KEY = "connected"
+MAC_ADDRESS_KEY = "mac"
+RAW_RESULTS_KEY = "raw"
+SERIAL_NUMBER_KEY = "serial_number"
 
 
 class AithreManager(object):
@@ -114,26 +117,28 @@ class AithreManager(object):
         response = []
         serial_numbers_reported = []
 
-        for (mac, illyrian) in AithreManager.__SPO2_SENSORS__.items():
+        for mac in sorted(AithreManager.__SPO2_SENSORS__.keys()):
             try:
+                illyrian = AithreManager.__SPO2_SENSORS__[mac]
                 serial = illyrian.get_serial_number()
 
                 if serial not in serial_numbers_reported:
                     serial_numbers_reported.append(serial)
 
                     response.append({
-                        "mac": mac,
+                        IS_CONNECTED_KEY: illyrian.is_connected(),
+                        MAC_ADDRESS_KEY: mac,
                         SPO2_LEVEL_KEY: illyrian.get_spo2_level(),
                         PULSE_KEY: illyrian.get_heartrate(),
                         SIGNAL_STRENGTH_KEY: illyrian.get_signal_strength(),
-                        "raw": illyrian.get_raw_result(),
-                        "serial": serial
+                        RAW_RESULTS_KEY: illyrian.get_raw_result(),
+                        SERIAL_NUMBER_KEY: serial
                     })
             except:
                 response.append({
                     ERROR_JSON_KEY: "Error fetching SPO2"
                 })
-        
+
         return response
 
     @staticmethod

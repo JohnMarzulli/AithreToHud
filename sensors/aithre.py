@@ -57,23 +57,27 @@ class Aithre(BlueToothDevice):
 
     def _update_levels(
         self
-    ):
+    ) -> bool:
         """
         Updates the battery level and carbon monoxide levels that the Aithre CO
         detector has found.
         """
         if self.__mac__ is None:
-            return
+            return False
 
         try:
             self.log("Attempting update")
             new_levels = get_aithre(self.__mac__)
-            self._levels_ = new_levels
+            self.__levels__ = new_levels
+
+            return True
         except Exception as ex:
             # In case the read fails, we will want to
             # attempt to find the MAC of the Aithre again.
             self.warn(
                 "Exception while attempting to update the cached levels.update() E={}".format(ex))
+
+            return False
 
     def get_battery(
         self
@@ -81,8 +85,8 @@ class Aithre(BlueToothDevice):
         """
         Gets the battery level of the CO monitor device.
         """
-        if self._levels_ is not None:
-            return self._levels_[1]
+        if self.__levels__ is not None:
+            return self.__levels__[1]
 
         return OFFLINE
 
@@ -92,7 +96,7 @@ class Aithre(BlueToothDevice):
         """
         Gets the current carbon monoxide levels.
         """
-        if self._levels_ is not None:
-            return self._levels_[0]
+        if self.__levels__ is not None:
+            return self.__levels__[0]
 
         return OFFLINE

@@ -52,7 +52,7 @@ def get_illyrian(
     illyrian = illyrians[mac_adr] if mac_adr in illyrians else None
 
     if illyrian is None:
-        return (OFFLINE, OFFLINE, OFFLINE)
+        return None
 
     r_value = int(illyrian[2:4], 16) / 100.0
     heartrate = int(illyrian[4:6], 16)
@@ -84,9 +84,17 @@ class Illyrian(BlueToothDevice):
         """
         try:
             new_levels = get_illyrian(self.__mac__)
-            self._levels_ = new_levels
+
+            if new_levels is None:
+                return False
+
+            self.__levels__ = new_levels
+
+            return True
         except:
             self.warn("Unable to get Illyrian levels")
+
+            return False
 
     def get_spo2_level(
         self
@@ -96,8 +104,8 @@ class Illyrian(BlueToothDevice):
             :param self: 
         """
 
-        if self._levels_ is not None:
-            return self._levels_[0]
+        if self.__levels__ is not None:
+            return self.__levels__[0]
 
         return OFFLINE
 
@@ -109,8 +117,8 @@ class Illyrian(BlueToothDevice):
             :param self: 
         """
 
-        if self._levels_ is not None:
-            return self._levels_[1]
+        if self.__levels__ is not None:
+            return self.__levels__[1]
 
         return OFFLINE
 
@@ -122,23 +130,23 @@ class Illyrian(BlueToothDevice):
             :param self: 
         """
 
-        if self._levels_ is not None:
-            return self._levels_[2]
+        if self.__levels__ is not None:
+            return self.__levels__[2]
 
         return OFFLINE
 
     def get_serial_number(
         self
     ):
-        if self._levels_ is not None:
-            return self._levels_[3]
+        if self.__levels__ is not None:
+            return self.__levels__[3]
 
         return OFFLINE
 
     def get_raw_result(
         self
     ):
-        if self._levels_ is not None:
-            return self._levels_[4]
+        if self.__levels__ is not None:
+            return self.__levels__[4]
 
         return OFFLINE

@@ -3,10 +3,13 @@ Interface definition and common code for interacting with Aithre devices
 using Bluetooth
 """
 
+from datetime import datetime
 from logging import Logger
 from sys import platform as os_platform
 
 OFFLINE = "OFFLINE"
+
+DEVICE_TIMEOUT_SECONDS = 60 * 2
 
 
 class BlueToothDevice(object):
@@ -59,7 +62,8 @@ class BlueToothDevice(object):
         self.warn("Initializing new Aithre object")
 
         self.__mac__ = mac
-        self._levels_ = None
+        self.__levels__ = None
+        self.__last_contacted__ = None
 
     def is_connected(
         self
@@ -68,7 +72,7 @@ class BlueToothDevice(object):
         Is the BlueTooth device currently connected and usable?
         """
 
-        return (self.__mac__ is not None and self._levels_ is not None)
+        return (self.__mac__ is not None and self.__last_contacted__ is not None and (datetime.utcnow() - self.__last_contacted__).total_seconds() < DEVICE_TIMEOUT_SECONDS)
 
     def update(
         self
@@ -76,4 +80,5 @@ class BlueToothDevice(object):
         """
         Attempts to update the values collected from the device.
         """
-        self._update_levels()
+        if self._update_levels():
+            self.__last_contacted__ = datetime.utcnow()

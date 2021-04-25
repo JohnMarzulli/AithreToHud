@@ -4,6 +4,7 @@ from aithre_task import AithreTask
 from bluepy.btle import DefaultDelegate, Peripheral, Scanner
 
 __DEVICE_SCAN_PERIOD__ = 15
+__DEVICE_CLEAR_PERIOD__ = __DEVICE_SCAN_PERIOD__ * 3
 
 
 class DeviceManager(DefaultDelegate):
@@ -243,5 +244,19 @@ scan_task = AithreTask(
     "ScanDevices",
     __DEVICE_SCAN_PERIOD__,
     scanner.process,
+    None,
+    True)
+
+
+def restart_device_search():
+    print("Starting device clearing")
+    scanner.clear()
+    print("Finished device clearing")
+
+
+clear_task = AithreTask(
+    "ClearResults",
+    __DEVICE_CLEAR_PERIOD__,
+    restart_device_search,
     None,
     True)
