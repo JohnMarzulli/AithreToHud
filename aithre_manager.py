@@ -6,6 +6,7 @@ import json
 
 from aithre_task import AithreTask
 from sensors.aithre import Aithre, get_aithre_mac
+from sensors.device_manager import DeviceManager
 from sensors.illyrian import Illyrian, get_illyrian_macs
 
 # EXAMPLES
@@ -72,7 +73,7 @@ class AithreManager(object):
             print("Attempted to scan and add SPO2 sensors, got e={}".format(e))
 
         try:
-            for illyrian in AithreManager.__SPO2_SENSORS__:
+            for illyrian in AithreManager.__SPO2_SENSORS__.values():
                 illyrian.update()
         except Exception as e:
             print("Attempted to update SPO2 sensors, got e={}".format(e))
@@ -109,6 +110,33 @@ class AithreManager(object):
             sort_keys=False)
 
     @staticmethod
+    def __get_raw_illyrians_response__() -> list:
+        response = []
+        serial_numbers_reported = []
+
+        for (mac, illyrian) in AithreManager.__SPO2_SENSORS__.items():
+            try:
+                serial = illyrian.get_serial_number()
+
+                if serial not in serial_numbers_reported:
+                    serial_numbers_reported.append(serial)
+
+                    response.append({
+                        "mac": mac,
+                        SPO2_LEVEL_KEY: illyrian.get_spo2_level(),
+                        PULSE_KEY: illyrian.get_heartrate(),
+                        SIGNAL_STRENGTH_KEY: illyrian.get_signal_strength(),
+                        "raw": illyrian.get_raw_result(),
+                        "serial": serial
+                    })
+            except:
+                response.append({
+                    ERROR_JSON_KEY: "Error fetching SPO2"
+                })
+        
+        return response
+
+    @staticmethod
     def get_illyrians(
         handler=None
     ) -> str:
@@ -118,22 +146,9 @@ class AithreManager(object):
 
         The V1 endpoint only handled a single sensor.
         """
-        response = []
-
-        for illyrian in AithreManager.__SPO2_SENSORS__:
-            try:
-                response.append({
-                    SPO2_LEVEL_KEY: illyrian.get_spo2_level(),
-                    PULSE_KEY: illyrian.get_heartrate(),
-                    SIGNAL_STRENGTH_KEY: illyrian.get_signal_strength()
-                })
-            except:
-                response.append({
-                    ERROR_JSON_KEY: "Error fetching SPO2"
-                })
 
         return json.dumps(
-            response,
+            AithreManager.__get_raw_illyrians_response__(),
             indent=4,
             sort_keys=False)
 
@@ -148,10 +163,7 @@ class AithreManager(object):
         spo2_response = {ERROR_JSON_KEY: 'Illyrian SPO2 sensor not detected'}
 
         if len(AithreManager.__SPO2_SENSORS__) > 0:
-            spo2_response = {
-                SPO2_LEVEL_KEY: AithreManager.__SPO2_SENSORS__[0].get_spo2_level(),
-                PULSE_KEY: AithreManager.__SPO2_SENSORS__[0].get_heartrate(),
-                SIGNAL_STRENGTH_KEY: AithreManager.__SPO2_SENSORS__[0].get_signal_strength()}
+            spo2_response = AithreManager.__get_raw_illyrians_response__()[0]
 
         return json.dumps(
             spo2_response,
@@ -160,6 +172,7 @@ class AithreManager(object):
 
 
 __SCAN_PERIOD__ = 10
+
 
 __UPDATE_TASK__ = AithreTask(
     "UpdateAithre",

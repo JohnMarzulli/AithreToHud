@@ -4,7 +4,8 @@ Code and class to interface with Illyrian CO2 blood pulsometers.
 
 from logging import Logger
 
-from sensors import bluetooth_device
+from sensors.bluetooth_device import OFFLINE, BlueToothDevice
+from sensors.device_manager import DeviceManager
 
 ILLYRIAN_BEACON_SUFFIX = "696C6C70"
 
@@ -14,7 +15,7 @@ def get_illyrian_mac():
     Attempts to find the BlueTooth MAC for the
     Aithre Illyrian blood oxygen detector.
     """
-    return bluetooth_device.get_mac_by_device_name(ILLYRIAN_BEACON_SUFFIX)
+    return DeviceManager.INSTANCE.get_mac_by_device_name(ILLYRIAN_BEACON_SUFFIX)
 
 
 def get_illyrian_macs() -> list:
@@ -28,7 +29,7 @@ def get_illyrian_macs() -> list:
         list: A list of MACs (as strings) of any Illyrians found.
     """
 
-    return bluetooth_device.get_macs_by_device_name(ILLYRIAN_BEACON_SUFFIX)
+    return DeviceManager.INSTANCE.get_macs_by_device_name(ILLYRIAN_BEACON_SUFFIX)
 
 
 def get_illyrian(
@@ -46,20 +47,25 @@ def get_illyrian(
     #  41[R VALUE * 100][HEART RATE] [SIGNAL STRENGTH][SERIAL NO]696C6C70
     #  [00][0001][0008]
     #  [40][39][ff]
-    illyrian = bluetooth_device.get_value_by_name(ILLYRIAN_BEACON_SUFFIX)
+    illyrians = DeviceManager.INSTANCE.get_values_by_name(ILLYRIAN_BEACON_SUFFIX)
+
+    illyrian = illyrians[mac_adr] if mac_adr in illyrians else None
 
     if illyrian is None:
-        return (bluetooth_device.OFFLINE, bluetooth_device.OFFLINE, bluetooth_device.OFFLINE)
+        return (OFFLINE, OFFLINE, OFFLINE)
 
     r_value = int(illyrian[2:4], 16) / 100.0
     heartrate = int(illyrian[4:6], 16)
     signal_strength = int(illyrian[6:8], 16)
+    serial_number = int(illyrian[8:12], 16)
     sp02 = 109 - (31 * r_value)
 
-    return (sp02, heartrate, signal_strength)
+    print("sp02:{}, heartrate:{}, signal_strength:{}, serial_number:{}, raw:{}".format(sp02, heartrate, signal_strength, serial_number, illyrian))
+
+    return (sp02, heartrate, signal_strength, serial_number, illyrian)
 
 
-class Illyrian(bluetooth_device.BlueToothDevice):
+class Illyrian(BlueToothDevice):
     def __init__(
         self,
         mac: str,
@@ -93,7 +99,7 @@ class Illyrian(bluetooth_device.BlueToothDevice):
         if self._levels_ is not None:
             return self._levels_[0]
 
-        return bluetooth_device.OFFLINE
+        return OFFLINE
 
     def get_heartrate(
         self
@@ -106,7 +112,7 @@ class Illyrian(bluetooth_device.BlueToothDevice):
         if self._levels_ is not None:
             return self._levels_[1]
 
-        return bluetooth_device.OFFLINE
+        return OFFLINE
 
     def get_signal_strength(
         self
@@ -119,4 +125,20 @@ class Illyrian(bluetooth_device.BlueToothDevice):
         if self._levels_ is not None:
             return self._levels_[2]
 
-        return bluetooth_device.OFFLINE
+        return OFFLINE
+
+    def get_serial_number(
+        self
+    ):
+        if self._levels_ is not None:
+            return self._levels_[3]
+
+        return OFFLINE
+
+    def get_raw_result(
+        self
+    ):
+        if self._levels_ is not None:
+            return self._levels_[4]
+
+        return OFFLINE

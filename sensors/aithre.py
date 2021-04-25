@@ -4,7 +4,8 @@ Code to interact with an Aithre carbon monoxide detector.
 
 from logging import Logger
 
-from sensors import bluetooth_device
+from sensors.bluetooth_device import BlueToothDevice, OFFLINE
+from sensors.device_manager import DeviceManager
 
 AITHRE_DEVICE_NAME = "AITHRE"
 
@@ -27,7 +28,7 @@ def get_aithre_mac():
     Attempts to find the BlueTooth MAC for the
     Aithre Carbon Monoxide detector.
     """
-    return bluetooth_device.get_mac_by_device_name(AITHRE_DEVICE_NAME)
+    return DeviceManager.INSTANCE.get_mac_by_device_name(AITHRE_DEVICE_NAME)
 
 
 def get_aithre(
@@ -40,20 +41,19 @@ def get_aithre(
     Returns: {(int, int)} -- The co and battery percentage of the Aithre
     """
 
-    co = bluetooth_device.get_service_value(mac_adr, AITHRE_ADDR_TYPE, CO_OFFSET)
-    bat = bluetooth_device.get_service_value(mac_adr, AITHRE_ADDR_TYPE, BAT_OFFSET)
+    co = DeviceManager.INSTANCE.get_service_value(mac_adr, AITHRE_ADDR_TYPE, CO_OFFSET)
+    bat = DeviceManager.INSTANCE.get_service_value(mac_adr, AITHRE_ADDR_TYPE, BAT_OFFSET)
 
     return co, bat
 
 
-class Aithre(bluetooth_device.BlueToothDevice):
+class Aithre(BlueToothDevice):
     def __init__(
         self,
         mac: str,
         logger: Logger = None
     ):
         super(Aithre, self).__init__(mac, logger)
-
 
     def _update_levels(
         self
@@ -84,7 +84,7 @@ class Aithre(bluetooth_device.BlueToothDevice):
         if self._levels_ is not None:
             return self._levels_[1]
 
-        return bluetooth_device.OFFLINE
+        return OFFLINE
 
     def get_co_level(
         self
@@ -95,4 +95,4 @@ class Aithre(bluetooth_device.BlueToothDevice):
         if self._levels_ is not None:
             return self._levels_[0]
 
-        return bluetooth_device.OFFLINE
+        return OFFLINE

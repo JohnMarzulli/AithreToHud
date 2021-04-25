@@ -35,6 +35,7 @@ sudo setcap cap_net_admin+eip  bluepy-helper
 - For some installations, PIP3 does not appear to compile bluepy-helper, hence the `make` step.
 - The exact path that `make` needs to be run in may differ.
 - The `setcap` steps allow BlueTooth to be used while **NOT** running as the `root` user.
+- If you encounter issues around exceptions with bluepy: `sudo systemctl restart bluetooth`
 
 ### Revision History
 

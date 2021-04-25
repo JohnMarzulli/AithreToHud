@@ -19,6 +19,13 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "DeviceScanner",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/device_scan.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
