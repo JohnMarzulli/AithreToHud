@@ -14,6 +14,7 @@ except:
 
 OFFLINE = "OFFLINE"
 
+
 def get_service_value(
     addr: str,
     addr_type: str,
@@ -62,7 +63,7 @@ def get_value_by_name(
 
     try:
         scanner = Scanner()
-        devices = scanner.scan(2)
+        devices = scanner.scan()
         for dev in devices:
             print("    {} {} {}".format(dev.addr, dev.addrType, dev.rssi))
 
@@ -90,12 +91,13 @@ def get_mac_by_device_name(
     """
     try:
         scanner = Scanner()
-        devices = scanner.scan(2)
+        devices = scanner.scan()
         for dev in devices:
             print("    {} {} {}".format(dev.addr, dev.addrType, dev.rssi))
 
             for (address_type, desc, value) in dev.getScanData():
                 try:
+                    print("{}:{}:{}".format(address_type, desc, value))
                     if name_to_find.lower() in value.lower():
                         return dev.addr
                 except Exception as ex:
@@ -105,6 +107,38 @@ def get_mac_by_device_name(
         print("Outter loop ex={}".format(ex))
 
     return None
+
+
+def get_macs_by_device_name(
+    name_to_find: str
+) -> list:
+    """
+    Attempts to find an Aithre MAC using Blue Tooth low energy.
+    Arguments:
+        name_to_find {string} -- The name (or partial name) to match the BLE info with.
+    Returns: {string} None if a device was not found, otherwise the MAC of the Aithre
+    """
+    found_macs = []
+
+    try:
+        scanner = Scanner()
+        devices = scanner.scan()
+
+        for dev in devices:
+            print("    {} {} {}".format(dev.addr, dev.addrType, dev.rssi))
+
+            scan_data = dev.getScanData()
+
+            for (address_type, desc, value) in scan_data:
+                try:
+                    if name_to_find.lower() in value.lower():
+                        found_macs.append(dev.addr)
+                except Exception as ex:
+                    print("DevScan loop - ex={}".format(ex))
+    except Exception as ex:
+        print("Outter loop ex={}".format(ex))
+
+    return found_macs
 
 
 class BlueToothDevice(object):
@@ -147,6 +181,7 @@ class BlueToothDevice(object):
 
     def __init__(
         self,
+        mac: str,
         logger: Logger = None
     ):
         self.__is_linux__ = 'linux' in os_platform
@@ -155,10 +190,8 @@ class BlueToothDevice(object):
 
         self.warn("Initializing new Aithre object")
 
-        self._mac_ = None
+        self.__mac__ = mac
         self._levels_ = None
-
-        self._update_mac_()
 
     def is_connected(
         self
@@ -167,7 +200,7 @@ class BlueToothDevice(object):
         Is the BlueTooth device currently connected and usable?
         """
 
-        return (self._mac_ is not None and self._levels_ is not None)
+        return (self.__mac__ is not None and self._levels_ is not None)
 
     def update(
         self

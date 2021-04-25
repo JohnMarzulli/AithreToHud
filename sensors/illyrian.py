@@ -17,6 +17,20 @@ def get_illyrian_mac():
     return bluetooth_device.get_mac_by_device_name(ILLYRIAN_BEACON_SUFFIX)
 
 
+def get_illyrian_macs() -> list:
+    """
+    Attempts to find any Illyrian devices that are connected.
+
+    Returns an empty list if none are found.
+    Returns a list of Macs (in string form) if any are found.
+
+    Returns:
+        list: A list of MACs (as strings) of any Illyrians found.
+    """
+
+    return bluetooth_device.get_macs_by_device_name(ILLYRIAN_BEACON_SUFFIX)
+
+
 def get_illyrian(
     mac_adr: str
 ) -> list:
@@ -48,21 +62,10 @@ def get_illyrian(
 class Illyrian(bluetooth_device.BlueToothDevice):
     def __init__(
         self,
+        mac: str,
         logger: Logger = None
     ):
-        super(Illyrian, self).__init__(logger=logger)
-
-    def _update_mac_(
-        self
-    ):
-        """
-        Updates the BlueTooth MAC that the Blood Oxygen sensor is on.
-        """
-        try:
-            self._mac_ = get_illyrian_mac()
-        except Exception as e:
-            self._mac_ = None
-            self.warn("Got EX={} during MAC update.".format(e))
+        super(Illyrian, self).__init__(mac, logger)
 
     def _update_levels(
         self
@@ -74,7 +77,7 @@ class Illyrian(bluetooth_device.BlueToothDevice):
         This is so the beacon can be used simultaneously by devices.
         """
         try:
-            new_levels = get_illyrian(self._mac_)
+            new_levels = get_illyrian(self.__mac__)
             self._levels_ = new_levels
         except:
             self.warn("Unable to get Illyrian levels")

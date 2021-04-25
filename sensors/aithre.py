@@ -49,21 +49,11 @@ def get_aithre(
 class Aithre(bluetooth_device.BlueToothDevice):
     def __init__(
         self,
+        mac: str,
         logger: Logger = None
     ):
-        super(Aithre, self).__init__(logger=logger)
+        super(Aithre, self).__init__(mac, logger)
 
-    def _update_mac_(
-        self
-    ):
-        """
-        Updates the MAC that the Aithre carbon monoxide detector is found at.
-        """
-        try:
-            self._mac_ = get_aithre_mac()
-        except Exception as e:
-            self._mac_ = None
-            self.warn("Got EX={} during MAC update.".format(e))
 
     def _update_levels(
         self
@@ -72,21 +62,16 @@ class Aithre(bluetooth_device.BlueToothDevice):
         Updates the battery level and carbon monoxide levels that the Aithre CO
         detector has found.
         """
-        if self._mac_ is None:
-            self.log("Aithre MAC is none while attempting to update levels.")
-            if self.__is_linux__:
-                self.warn("Aithre MAC is none, attempting to connect.")
-                self._update_mac_()
+        if self.__mac__ is None:
+            return
 
         try:
             self.log("Attempting update")
-            new_levels = get_aithre(self._mac_)
+            new_levels = get_aithre(self.__mac__)
             self._levels_ = new_levels
         except Exception as ex:
             # In case the read fails, we will want to
             # attempt to find the MAC of the Aithre again.
-
-            self._mac_ = None
             self.warn(
                 "Exception while attempting to update the cached levels.update() E={}".format(ex))
 
