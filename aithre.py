@@ -1,5 +1,3 @@
-import datetime
-import sys
 import time
 from logging import Logger
 from sys import platform as os_platform
@@ -9,7 +7,7 @@ from aithre_task import AithreTask
 IS_LINUX = 'linux' in os_platform
 
 if IS_LINUX:
-    from bluepy.btle import UUID, Peripheral, Scanner, DefaultDelegate
+    from bluepy.btle import Peripheral, Scanner
 
 
 # The Aithre is always expected to have a public address
@@ -103,9 +101,10 @@ def get_illyrian(
     r_value = int(illyrian[2:4], 16) / 100.0
     heartrate = int(illyrian[4:6], 16)
     signal_strength = int(illyrian[6:8], 16)
+    serial_number = int(illyrian[8:12], 16)
     sp02 = 109 - (31 * r_value)
 
-    return (sp02, heartrate, signal_strength)
+    return [[sp02, heartrate, signal_strength], serial_number]
 
 
 def get_value_by_name(
@@ -131,6 +130,39 @@ def get_value_by_name(
         print("Outter loop ex={}".format(ex))
 
     return None
+
+
+def get_macs_by_device_name(
+    name_to_find: str
+):
+    """
+    Attempts to find an Aithre MAC using Blue Tooth low energy.
+    Arguments:
+        name_to_find {string} -- The name (or partial name) to match the BLE info with.
+    Returns: {string} None if a device was not found, otherwise the MAC of the Aithre
+    """
+    if not IS_LINUX:
+        return []
+
+    macs = []
+
+    try:
+        scanner = Scanner()
+        devices = scanner.scan(2)
+        for dev in devices:
+            print("    {} {} {}".format(dev.addr, dev.addrType, dev.rssi))
+
+            for (address_type, desc, value) in dev.getScanData():
+                try:
+                    if name_to_find.lower() in value.lower():
+                        macs.append(dev.addr)
+                except Exception as ex:
+                    print("DevScan loop - ex={}".format(ex))
+
+    except Exception as ex:
+        print("Outter loop ex={}".format(ex))
+
+    return macs
 
 
 def get_mac_by_device_name(
@@ -172,12 +204,12 @@ def get_aithre_mac():
     return get_mac_by_device_name(AITHRE_DEVICE_NAME)
 
 
-def get_illyrian_mac():
+def get_illyrian_macs():
     """
     Attempts to find the BlueTooth MAC for the
     Aithre Illyrian blood oxygen detector.
     """
-    return get_mac_by_device_name(ILLYRIAN_BEACON_SUFFIX)
+    return get_macs_by_device_name(ILLYRIAN_BEACON_SUFFIX)
 
 
 SCAN_PERIOD = 10
@@ -224,16 +256,15 @@ class BlueToothDevice(object):
 
     def __init__(
         self,
+        mac: str,
         logger: Logger = None
     ):
         self.__logger__ = logger
 
         self.warn("Initializing new Aithre object")
 
-        self._mac_ = None
+        self.__mac__ = mac
         self._levels_ = None
-
-        self._update_mac_()
 
     def is_connected(
         self
@@ -242,7 +273,7 @@ class BlueToothDevice(object):
         Is the BlueTooth device currently connected and usable?
         """
 
-        return (self._mac_ is not None and self._levels_ is not None) or not IS_LINUX
+        return (self.__mac__ is not None and self._levels_ is not None) or not IS_LINUX
 
     def update(
         self
@@ -256,21 +287,11 @@ class BlueToothDevice(object):
 class Illyrian(BlueToothDevice):
     def __init__(
         self,
+        mac: str,
         logger: Logger = None
     ):
-        super(Illyrian, self).__init__(logger=logger)
-
-    def _update_mac_(
-        self
-    ):
-        """
-        Updates the BlueTooth MAC that the Blood Oxygen sensor is on.
-        """
-        try:
-            self._mac_ = get_illyrian_mac()
-        except Exception as e:
-            self._mac_ = None
-            self.warn("Got EX={} during MAC update.".format(e))
+        super(Illyrian, self).__init__(mac, logger=logger)
+        self.__serial__ = None
 
     def _update_levels(
         self
@@ -282,10 +303,15 @@ class Illyrian(BlueToothDevice):
         This is so the beacon can be used simultaneously by devices.
         """
         try:
-            new_levels = get_illyrian(self._mac_)
+            new_levels, self.__serial__ = get_illyrian(self.__mac__)
             self._levels_ = new_levels
         except:
             self.warn("Unable to get Illyrian levels")
+
+    def get_serial_number(
+        self
+    ) -> str:
+        return self.__serial__
 
     def get_spo2_level(
         self
@@ -330,21 +356,10 @@ class Illyrian(BlueToothDevice):
 class Aithre(BlueToothDevice):
     def __init__(
         self,
+        mac: str,
         logger: Logger = None
     ):
-        super(Aithre, self).__init__(logger=logger)
-
-    def _update_mac_(
-        self
-    ):
-        """
-        Updates the MAC that the Aithre carbon monoxide detector is found at.
-        """
-        try:
-            self._mac_ = get_aithre_mac()
-        except Exception as e:
-            self._mac_ = None
-            self.warn("Got EX={} during MAC update.".format(e))
+        super(Aithre, self).__init__(mac, logger=logger)
 
     def _update_levels(
         self
@@ -353,21 +368,18 @@ class Aithre(BlueToothDevice):
         Updates the battery level and carbon monoxide levels that the Aithre CO
         detector has found.
         """
-        if self._mac_ is None:
+        if self.__mac__ is None:
             self.log("Aithre MAC is none while attempting to update levels.")
-            if IS_LINUX:
-                self.warn("Aithre MAC is none, attempting to connect.")
-                self._update_mac_()
 
         try:
             self.log("Attempting update")
-            new_levels = get_aithre(self._mac_)
+            new_levels = get_aithre(self.__mac__)
             self._levels_ = new_levels
         except Exception as ex:
             # In case the read fails, we will want to
             # attempt to find the MAC of the Aithre again.
 
-            self._mac_ = None
+            self.__mac__ = None
             self.warn(
                 "Exception while attempting to update the cached levels.update() E={}".format(ex))
 
@@ -403,7 +415,10 @@ def update_aithre_sensor():
     """
     try:
         if AithreManager.CO_SENSOR is None:
-            AithreManager.CO_SENSOR = Aithre()
+            mac = get_aithre_mac()
+
+            if mac is not None and len(mac) > 0:
+                AithreManager.CO_SENSOR = Aithre(mac)
     except Exception as e:
         print("Attempted to init CO sensor, got e={}".format(e))
         AithreManager.CO_SENSOR = None
@@ -419,15 +434,13 @@ def update_illyrian_sensor():
     not turned on, then the controlling object is
     set to None.
     """
-    try:
-        if AithreManager.SPO2_SENSOR is None:
-            AithreManager.SPO2_SENSOR = Illyrian()
-    except Exception as e:
-        print("Attempted to init SPO2 sensor, got e={}".format(e))
-        AithreManager.SPO2_SENSOR = None
+    illyrian_macs = get_illyrian_macs()
 
-    if AithreManager.SPO2_SENSOR is not None:
-        AithreManager.SPO2_SENSOR.update()
+    for mac in illyrian_macs:
+        if mac not in AithreManager.SPO2_SENSORS:
+            AithreManager.SPO2_SENSORS[mac] = Illyrian(mac)
+
+        AithreManager.SPO2_SENSORS[mac].update()
 
 
 class AithreManager(object):
@@ -436,7 +449,7 @@ class AithreManager(object):
     has a common store point.
     """
     CO_SENSOR = None
-    SPO2_SENSOR = None
+    SPO2_SENSORS = {}
 
     @staticmethod
     def update_sensors():

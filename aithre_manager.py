@@ -2,16 +2,10 @@
 Module to run a RESTful server to set and get the configuration.
 """
 
-
-import datetime
 import json
 import os
 import re
 import shutil
-import socket
-import sys
-import urllib
-
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import aithre
@@ -21,6 +15,7 @@ RESTFUL_HOST_PORT = 8081
 # EXAMPLES
 # Invoke-WebRequest -Uri "http://localhost:8081/aithre" -Method GET -ContentType "application/json"
 # Invoke-WebRequest -Uri "http://localhost:8081/illyrian" -Method GET -ContentType "application/json"
+# Invoke-WebRequest -Uri "http://localhost:8081/illyrians" -Method GET -ContentType "application/json"
 #
 # curl -X GET http://localhost:8081/aithre
 
@@ -32,6 +27,7 @@ BATTERY_LEVEL_KEY = "battery"
 SPO2_LEVEL_KEY = "spo2"
 PULSE_KEY = "heartrate"
 SIGNAL_STRENGTH_KEY = "signal"
+SERIAL_KEY = "serial"
 
 
 def get_aithre(
@@ -44,10 +40,44 @@ def get_aithre(
     co_response = {ERROR_JSON_KEY: 'Aithre CO sensor not detected'}
 
     if aithre.AithreManager.CO_SENSOR is not None:
-        co_response = {CO_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_co_level(),
-                       BATTERY_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_battery()}
+        co_response = {
+            CO_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_co_level(),
+            BATTERY_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_battery()}
     return json.dumps(
         co_response,
+        indent=4,
+        sort_keys=False)
+
+
+def get_all_illrian_response_packages() -> list:
+    spo2_levels = []
+    serials_reported = []
+
+    for sensor in aithre.AithreManager.SPO2_SENSORS.values():
+        serial = sensor.get_serial_number()
+
+        if serial in serials_reported:
+            continue
+
+        spo2_response = {
+            SPO2_LEVEL_KEY: sensor.get_spo2_level(),
+            PULSE_KEY: sensor.get_heartrate(),
+            SIGNAL_STRENGTH_KEY: sensor.get_signal_strength(),
+            SERIAL_KEY: serial}
+
+        spo2_levels.append(spo2_response)
+        serials_reported.append(serial)
+
+    return spo2_levels
+
+
+def get_illyrians(
+    handler
+):
+    spo2_levels = get_all_illrian_response_packages()
+
+    return json.dumps(
+        spo2_levels,
         indent=4,
         sort_keys=False)
 
@@ -61,10 +91,10 @@ def get_illyrian(
     """
     spo2_response = {ERROR_JSON_KEY: 'Illyrian SPO2 sensor not detected'}
 
-    if aithre.AithreManager.SPO2_SENSOR is not None:
-        spo2_response = {SPO2_LEVEL_KEY: aithre.AithreManager.SPO2_SENSOR.get_spo2_level(),
-                         PULSE_KEY: aithre.AithreManager.SPO2_SENSOR.get_heartrate(),
-                         SIGNAL_STRENGTH_KEY: aithre.AithreManager.SPO2_SENSOR.get_signal_strength()}
+    all_responses = get_all_illrian_response_packages()
+
+    if len(all_responses) > 0:
+        spo2_response = all_responses[0]
 
     return json.dumps(
         spo2_response,
@@ -80,6 +110,7 @@ class AithreHost(BaseHTTPRequestHandler):
     HERE = os.path.dirname(os.path.realpath(__file__))
     ROUTES = {
         r'^/aithre': {'GET': get_aithre},
+        r'^/illyrians': {'GET': get_illyrians},
         r'^/illyrian': {'GET': get_illyrian}
     }
 
