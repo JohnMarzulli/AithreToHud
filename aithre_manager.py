@@ -21,14 +21,6 @@ RESTFUL_HOST_PORT = 8081
 
 ERROR_JSON_KEY = 'error'
 
-CO_LEVEL_KEY = "co"
-BATTERY_LEVEL_KEY = "battery"
-
-SPO2_LEVEL_KEY = "spo2"
-PULSE_KEY = "heartrate"
-SIGNAL_STRENGTH_KEY = "signal"
-SERIAL_KEY = "serial"
-
 
 def get_aithre(
     handler
@@ -40,9 +32,7 @@ def get_aithre(
     co_response = {ERROR_JSON_KEY: 'Aithre CO sensor not detected'}
 
     if aithre.AithreManager.CO_SENSOR is not None:
-        co_response = {
-            CO_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_co_level(),
-            BATTERY_LEVEL_KEY: aithre.AithreManager.CO_SENSOR.get_battery()}
+        co_response = aithre.AithreManager.CO_SENSOR.get_response()
     return json.dumps(
         co_response,
         indent=4,
@@ -59,13 +49,7 @@ def get_all_illrian_response_packages() -> list:
         if serial in serials_reported:
             continue
 
-        spo2_response = {
-            SPO2_LEVEL_KEY: sensor.get_spo2_level(),
-            PULSE_KEY: sensor.get_heartrate(),
-            SIGNAL_STRENGTH_KEY: sensor.get_signal_strength(),
-            SERIAL_KEY: serial}
-
-        spo2_levels.append(spo2_response)
+        spo2_levels.append(sensor.get_response())
         serials_reported.append(serial)
 
     return spo2_levels
