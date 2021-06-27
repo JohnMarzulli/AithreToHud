@@ -8,8 +8,6 @@ import re
 import shutil
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-import aithre
-
 RESTFUL_HOST_PORT = 8081
 
 # EXAMPLES
@@ -29,30 +27,27 @@ def get_aithre(
     Creates a response package that gives the current carbon monoxide
     results from an Aithre.
     """
-    co_response = {ERROR_JSON_KEY: 'Aithre CO sensor not detected'}
+    response = {"co": 1, "battery": 95}
 
-    if aithre.AithreManager.CO_SENSOR is not None:
-        co_response = aithre.AithreManager.CO_SENSOR.get_response()
     return json.dumps(
-        co_response,
+        response,
         indent=4,
         sort_keys=False)
 
 
 def get_all_illrian_response_packages() -> dict:
     spo2_levels = []
-    serials_reported = []
 
-    for sensor in aithre.AithreManager.SPO2_SENSORS.values():
-        serial = sensor.get_serial_number()
+    for sensor in ["Sim1", "Sim2"]:
+        illy_resp = {
+            "spo2": 95,
+            "heartrate": 85,
+            "signal": 4,
+            "serial": sensor}
 
-        if serial in serials_reported:
-            continue
+        spo2_levels.append(illy_resp)
 
-        spo2_levels.append(sensor.get_response())
-        serials_reported.append(serial)
-
-    return {"reports", spo2_levels}
+    return {"reports": spo2_levels}
 
 
 def get_illyrians(
@@ -73,20 +68,13 @@ def get_illyrian(
     Creates a response package that gives the current blood oxygen levels
     and heartrate from an Illyrian sensor.
     """
-    spo2_response = {ERROR_JSON_KEY: 'Illyrian SPO2 sensor not detected'}
-
-    all_responses = get_all_illrian_response_packages()
-
-    if len(all_responses) > 0:
-        spo2_response = all_responses[0]
-
     return json.dumps(
-        spo2_response,
+        get_all_illrian_response_packages()[0],
         indent=4,
         sort_keys=False)
 
 
-class AithreHost(BaseHTTPRequestHandler):
+class AithreSimulatorHost(BaseHTTPRequestHandler):
     """
     Handles the HTTP response for status.
     """
@@ -134,7 +122,7 @@ class AithreHost(BaseHTTPRequestHandler):
         if method == 'GET':
             try:
                 f = open(os.path.join(
-                    AithreHost.HERE, route['file']))
+                    AithreSimulatorHost.HERE, route['file']))
                 try:
                     self.send_response(200)
                     if 'media_type' in route:
@@ -193,13 +181,13 @@ class AithreHost(BaseHTTPRequestHandler):
             self.__handle_request__(route, method)
 
     def get_route(self):
-        for path, route in AithreHost.ROUTES.items():
+        for path, route in AithreSimulatorHost.ROUTES.items():
             if re.match(path, self.path):
                 return route
         return None
 
 
-class AithreServer(object):
+class AithreSimulatorServer(object):
     """
     Class to handle running a REST endpoint to handle configuration.
     """
@@ -240,9 +228,9 @@ class AithreServer(object):
         self.__port__ = RESTFUL_HOST_PORT
         self.__local_ip__ = self.get_server_ip()
         server_address = (self.__local_ip__, self.__port__)
-        self.__http__ = HTTPServer(server_address, AithreHost)
+        self.__http__ = HTTPServer(server_address, AithreSimulatorHost)
 
 
 if __name__ == '__main__':
-    host = AithreServer()
+    host = AithreSimulatorServer()
     host.run()

@@ -12,6 +12,13 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "AithreSimulator",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/aithre_simulator.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "AithreConsole",
             "type": "python",
             "request": "launch",
